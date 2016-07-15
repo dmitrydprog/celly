@@ -40,9 +40,7 @@ enum Direction {
 
 
 impl Direction {
-
     fn opposite(&self) -> Self {
-
         match *self {
             Direction::NW => Direction::SE,
             Direction::NE => Direction::SW,
@@ -50,6 +48,21 @@ impl Direction {
             Direction::E => Direction::W,
             Direction::SW => Direction::NE,
             Direction::SE => Direction::NW,
+        }
+    }
+
+    fn to_int(&self) -> i32 {
+        *self as i32
+    }
+
+    fn from_int(&self, v: i32) -> Self {
+        match v {
+            0 => Direction::NW,
+            1 => Direction::NE,
+            2 => Direction::W,
+            3 => Direction::E,
+            4 => Direction::SW,
+            5 => Direction::SE,
         }
     }
 }
