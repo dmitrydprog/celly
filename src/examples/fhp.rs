@@ -107,7 +107,6 @@ impl Cell for FHP {
 
 
 impl FHP {
-
     fn collision<'a, I>(&self, neighbors: I) -> Self
         where I: Iterator<Item=Option<&'a Self>> {
 
@@ -117,23 +116,9 @@ impl FHP {
         };
 
         for (neighbor, direction) in neighbors.zip(self.directions().iter()) {
-
             match neighbor {
-
                 Some(neighbor) => {
-                    let opposite = direction.opposite();
-                    let head_on = self.particle(&direction) &&
-                                  neighbor.particle(&opposite) &&
-                                  !self.particle(&direction.perpendicular()) &&
-                                  !neighbor.particle(&opposite.perpendicular());
 
-                    if head_on {
-                        new.set_particle(&direction.perpendicular(), true);
-                    }
-                    else {
-                        let particle = new.particle(&direction) || self.particle(&direction);
-                        new.set_particle(&direction, particle);
-                    }
                 },
                 // Rebound
                 None => {
@@ -157,7 +142,6 @@ impl FHP {
         };
 
         for (neighbor, direction) in neighbors.zip(self.directions().iter()) {
-
             match neighbor {
                 Some(neighbor) => {
                     let opposite = direction.opposite();
