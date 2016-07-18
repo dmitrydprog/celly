@@ -10,16 +10,17 @@ use grid::square::SquareGrid;
 
 /// Implementation of [FHP model](https://en.wikipedia.org/wiki/FHP_model).
 /// Assumes Hexagonal neighborhood.
-
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 enum Stage {
     Collision,
-    Transport
+    Transport,
 }
 
 
 impl Default for Stage {
-    fn default() -> Self { Stage::Collision }
+    fn default() -> Self {
+        Stage::Collision
+    }
 }
 
 //      N
@@ -55,7 +56,7 @@ impl Direction {
         *self as i32
     }
 
-    fn from_int(&self, v: i32) -> Self {
+    fn from_int(v: i32) -> Self {
         match v {
             0 => Direction::NW,
             1 => Direction::NE,
@@ -63,6 +64,7 @@ impl Direction {
             3 => Direction::E,
             4 => Direction::SW,
             5 => Direction::SE,
+            _ => Direction::NW,
         }
     }
 }
@@ -72,7 +74,7 @@ impl Direction {
 struct FHP {
     particles: [bool; 6],
     stage: Stage,
-    coord: (i32, i32)
+    coord: (i32, i32),
 }
 
 
@@ -80,7 +82,8 @@ impl Cell for FHP {
     type Coord = (i32, i32);
 
     fn step<'a, I>(&'a self, neighbors: I) -> Self
-            where I: Iterator<Item=Option<&'a Self>> {
+        where I: Iterator<Item = Option<&'a Self>>
+    {
 
         match self.stage {
             Stage::Collision => self.collision(neighbors),
@@ -108,38 +111,104 @@ impl Cell for FHP {
 
 impl FHP {
     fn collision<'a, I>(&self, neighbors: I) -> Self
-        where I: Iterator<Item=Option<&'a Self>> {
+        where I: Iterator<Item = Option<&'a Self>>
+    {
 
-        let mut new = FHP {
-            stage: Stage::Transport,
-            ..Default::default()
-        };
+        let mut new = FHP { stage: Stage::Transport, ..Default::default() };
 
-        for (neighbor, direction) in neighbors.zip(self.directions().iter()) {
-            match neighbor {
-                Some(neighbor) => {
+        self.resolve_2p_col(&mut new.particles);
+        self.resolve_3p_col(&mut new.particles);
 
-                },
-                // Rebound
-                None => {
-                    if self.particle(&direction) {
-                        let opposite = direction.opposite();
-                        new.set_particle(&opposite, true);
-                    }
-                }
-            }
-        }
+        // match neighbor {
+        //     Some(_) => {
+        //     }
+        //     // Rebound
+        //     None => {
+        //         if self.particle(&direction) {
+        //             let opposite = direction.opposite();
+        //             new.set_particle(&opposite, true);
+        //         }
+        //     }
+        // }
+        // for (neighbor, direction) in neighbors.zip(self.directions().iter()) {
+        // }
 
         new
     }
 
-    fn transport<'a, I>(&self, neighbors: I) -> Self
-        where I: Iterator<Item=Option<&'a Self>> {
+    fn resolve_2p_col(&self, ps: &mut [bool; 6]) -> bool {
+        if self.particles.iter().filter(|p| **p).count() != 2 {
+            return false;
+        }
 
-        let mut new = FHP {
-            stage: Stage::Collision,
-            ..Default::default()
+        // self.particles
+        //     .iter()
+        //     .enumerate()
+        //     .filter(|_, p| p)
+        //     .move_iter()
+        //     .map(|(i, p)| Direction::from_int(i).opposite())
+        //     .map(|d| ps[d.to_int() as usize] = true);
+
+        // for val in self.particles
+        //     .iter()
+        //     .enumerate()
+        //     .filter(|i, p| p)
+        //     .take(2)
+        //     .collect::<(usize, &bool)>() {
+
+        //     let (ind, part) = val;
+
+        //     let opposite = Direction::from_int().opposite();
+        //     let pos_opposite = opposite.to_int() as usize;
+
+        //     ps[pos_opposite] = true;
+        // }
+
+        for val in self.particles.iter().enumerate() {
+            let (ind, part) = val;
+
+            if !part {
+                continue;
+            }
+
+            let opposite = Direction::from_int(ind as i32).opposite();
+            let pos_opposite = opposite.to_int() as usize;
+
+            ps[pos_opposite] = true;
+        }
+
+        true
+    }
+
+    fn resolve_3p_col(&self, ps: &mut [bool; 6]) -> bool {
+        if !(self.particles[0] ^ self.particles[1]) {
+            return false;
+        }
+
+        let even = self.particles[0];
+
+        let (to_filter, to_paste) = if even {
+            ([0, 2, 4], [1, 3, 5])
+        } else {
+            ([1, 3, 5], [0, 2, 4])
         };
+
+        if to_filter.iter().all(|&x| self.particles[x]) {
+            for &i in to_paste.iter() {
+                ps[i] = true;
+            }
+
+            return true;
+        }
+
+        false
+    }
+
+    fn transport<'a, I>(&self, neighbors: I) -> Self
+        where I: Iterator<Item = Option<&'a Self>>
+    {
+
+        let mut new = FHP { stage: Stage::Collision, ..Default::default() };
 
         for (neighbor, direction) in neighbors.zip(self.directions().iter()) {
             match neighbor {
@@ -147,9 +216,9 @@ impl FHP {
                     let opposite = direction.opposite();
 
                     if neighbor.particle(&opposite) {
-                        new.set_particle(&opposite, neighbor.particle(&opposite));
+                        new.set_particle(&opposite, true);
                     }
-                },
+                }
                 None => {
                     if self.particle(&direction) {
                         new.set_particle(&direction, true);
@@ -172,10 +241,7 @@ impl FHP {
 
     #[inline]
     pub fn directions(&self) -> [Direction; 6] {
-        [
-            Direction::NW, Direction::NE, Direction::W,
-            Direction::E, Direction::SW, Direction::SE
-        ]
+        [Direction::NW, Direction::NE, Direction::W, Direction::E, Direction::SW, Direction::SE]
     }
 }
 
